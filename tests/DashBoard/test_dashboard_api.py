@@ -1,9 +1,16 @@
+"""
+Dashboard API Test Suite
+
+This module contains API tests for validating the dashboard data endpoints.
+"""
 import pytest
 
 @pytest.mark.order(3)
 class TestAuthAPI:
+    """Validates the authentication API endpoints."""
 
     def test_verify_token(self, api_context):
+        """Verifies that the auth token is valid and returns correct user details."""
         response = api_context.get("api/auth/verify-token")
 
         assert response.status == 200
@@ -20,9 +27,12 @@ class TestAuthAPI:
         assert "tenant" in user
 
 
+@pytest.mark.order(3)
 class TestDashboardStatsAPI:
+    """Validates the dashboard statistics endpoints."""
 
     def test_get_stats(self, api_context):
+        """Fetches the dashboard statistics and validates the response schema."""
         response = api_context.get("/api/stats")
 
         assert response.status == 200
@@ -41,6 +51,7 @@ class TestDashboardStatsAPI:
         assert isinstance(data["tenant"], str)
 
     def test_stats_vs_products(self, api_context):
+        """Validates that the active products count in stats matches the products list."""
         stats = api_context.get("/api/stats").json()
         products = api_context.get("/api/products").json()
 
@@ -53,9 +64,12 @@ class TestDashboardStatsAPI:
 
 
 
+@pytest.mark.order(3)
 class TestProductsAPI:
+    """Validates the products API endpoints."""
 
     def test_get_products(self, api_context):
+        """Fetches the products list and validates the fields of the first product."""
         response = api_context.get("/api/products")
 
         assert response.status == 200
@@ -77,9 +91,12 @@ class TestProductsAPI:
 
 
 
+@pytest.mark.order(3)
 class TestScenesAPI:
+    """Validates the scenes API endpoints."""
 
     def test_get_scenes(self, api_context):
+        """Fetches the scenes list and validates the fields of the first scene."""
         response = api_context.get("/api/scenes")
 
         assert response.status == 200

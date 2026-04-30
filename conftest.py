@@ -4,22 +4,7 @@ import yaml
 import os
 from dotenv import load_dotenv
 load_dotenv()
-import json
 
-import json
-
-def get_token_from_storage():
-    with open("auth.json") as f:
-        state = json.load(f)
-
-    for origin in state.get("origins", []):
-        for item in origin.get("localStorage", []):
-            if item["name"] == "auth_token":   
-                return item["value"]
-
-    raise Exception("auth_token not found in auth.json")
-
-    raise Exception("Token not found in auth.json")
 def get_env():
     return {
         "email_user": os.getenv("EMAIL_USER"),
@@ -40,12 +25,16 @@ import pytest
 from playwright.sync_api import Playwright
 
 @pytest.fixture(scope="session")
-def api_context(playwright: Playwright, config):
-    storage = "auth.json" if os.path.exists("auth.json") else None
-    token = get_token_from_storage()
+def api_context(playwright: Playwright, config, page):
+    if page.url == "about:blank":
+        page.goto(config["base_url"])
+        
+    token = page.evaluate("window.localStorage.getItem('auth_token')")
+    if not token:
+        raise Exception("auth_token not found in browser localStorage. Did login run?")
+
     request_context = playwright.request.new_context(
         base_url=config["api_base_url"],
-        storage_state=storage,
         extra_http_headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {token}",
@@ -55,23 +44,11 @@ def api_context(playwright: Playwright, config):
     request_context.dispose()
 
 
-# @pytest.fixture(scope="session", autouse=True)
-# def cleanup_auth():
-#     yield
-
-#     if os.path.exists("auth.json"):
-#         os.remove("auth.json")
-#         print("auth.json deleted after test session")
-
-@pytest.fixture
+@pytest.fixture(scope="session")
 def page(playwright: Playwright, config):
     browser = playwright.chromium.launch(headless=config["headless"],slow_mo=500)
 
-    if os.path.exists("auth.json"):
-        context = browser.new_context(storage_state="auth.json")
-    else:
-        context = browser.new_context()
-
+    context = browser.new_context()
     page = context.new_page()
 
     yield page

@@ -57,6 +57,13 @@ automation-framework/
    playwright install
    ```
 
+4. **Environment Variables**
+   Create a `.env` file in the project root directory and add the following email credentials required for OTP login testing:
+   ```env
+   EMAIL_USER=your-email@example.com
+   EMAIL_PASS=your-email-password
+   ```
+
 ## Running Tests
 
 ### Using the Helper Script
