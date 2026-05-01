@@ -16,8 +16,10 @@ venv.bak/
 *.json
 
 # Allure
-allure-report/
+test-results/
 allure-results/
+reports/*
+allure-report/
 
 # Logs
 logs/

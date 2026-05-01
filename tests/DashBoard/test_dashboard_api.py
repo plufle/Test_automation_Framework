@@ -3,9 +3,7 @@ Dashboard API Test Suite
 
 This module contains API tests for validating the dashboard data endpoints.
 """
-import pytest
 
-@pytest.mark.order(3)
 class TestAuthAPI:
     """Validates the authentication API endpoints."""
 
@@ -27,7 +25,6 @@ class TestAuthAPI:
         assert "tenant" in user
 
 
-@pytest.mark.order(3)
 class TestDashboardStatsAPI:
     """Validates the dashboard statistics endpoints."""
 
@@ -64,7 +61,6 @@ class TestDashboardStatsAPI:
 
 
 
-@pytest.mark.order(3)
 class TestProductsAPI:
     """Validates the products API endpoints."""
 
@@ -91,7 +87,6 @@ class TestProductsAPI:
 
 
 
-@pytest.mark.order(3)
 class TestScenesAPI:
     """Validates the scenes API endpoints."""
 

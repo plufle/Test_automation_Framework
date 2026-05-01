@@ -22,8 +22,8 @@ automation-framework/
 ├── reports/              # Raw Allure test results generated during execution
 ├── testdata/             # JSON/CSV or other files used for data-driven testing
 ├── tests/                # All test execution scripts
-│   ├── api/              # API specific test cases
-│   └── ui/               # UI specific test cases
+│   ├── DashBoard/        # Dashboard API and UI specific test cases
+│   └── Login/            # Login specific test cases
 ├── utils/                # Utility and helper functions
 ├── .gitignore            # Ignored files and folders for Git
 ├── conftest.py           # Pytest entrypoint containing shared test fixtures
@@ -91,12 +91,12 @@ If you want to run specific tests or skip generating the report immediately:
 
 - **Run only UI tests:**
   ```bash
-  pytest tests/ui/
+  pytest tests/DashBoard/test_dashboard_ui.py
   ```
 
 - **Run only API tests:**
   ```bash
-  pytest tests/api/
+  pytest tests/DashBoard/test_dashboard_api.py
   ```
 
 - **Run tests and collect Allure results manually:**
@@ -107,5 +107,14 @@ If you want to run specific tests or skip generating the report immediately:
 
 ## Writing Tests
 
-- **UI Tests**: Add new UI tests to the `tests/ui/` folder using Playwright. Use the pre-configured `page` fixture available via `conftest.py`.
-- **API Tests**: Add new API tests to the `tests/api/` folder using the `requests` library.
+- **UI Tests**: Add new UI tests to the `tests/DashBoard/` folder using Playwright. Use the standard Page Object Model patterns via `pages/`. Tests are now automatically configured to take screenshots, videos, and Playwright traces on failure.
+- **API Tests**: Add new API tests using the pre-authenticated `api_context` fixture.
+
+## Debugging Failures
+
+By default, the framework retains screenshots, videos, and full Playwright traces for any failed tests. 
+When viewing the Allure report, you can inspect the attachments on failed steps.
+To manually inspect a trace, use the Playwright CLI:
+```bash
+playwright show-trace test-results/<trace-zip-file>
+```

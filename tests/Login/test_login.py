@@ -3,33 +3,30 @@ Login Test Suite
 
 This module contains UI tests for the login functionality.
 """
+from pages.login_page import LoginPage
 from utils.email_otp import fetch_otp
-import pytest
 
-@pytest.mark.order(1)
 class TestLogin:
     """Validates the login flow using OTP."""
 
-    def test_login_with_otp(self, page, config):
+    def test_login_with_otp(self, unauthenticated_page, config):
         """
         Tests the complete login flow using an email OTP.
         
         Navigates to the login page, requests an OTP, fetches it via email,
         submits the OTP, and verifies successful login by ensuring the
-        'Overview' section is visible on the dashboard. Saves the auth state.
+        'Overview' section is visible on the dashboard.
         """
-        page.goto(config["base_url"])
-        print(config["base_url"])
-        page.fill("#email", config["email_user"])
-        page.get_by_role("button", name="Send Verification Code").click()
+        login_page = LoginPage(unauthenticated_page)
+        
+        login_page.navigate(config["base_url"])
+        login_page.fill_email(config["email_user"])
+        login_page.click_send_otp()
 
-        otp = fetch_otp(
-            config["email_user"],
-            config["email_pass"]
-        )
+        otp = fetch_otp(config["email_user"], config["email_pass"])
 
-        page.fill("#otp", otp)
-        page.get_by_role("button", name="Verify & Sign In").click()
-        page.wait_for_url("**/home")
+        login_page.fill_otp(otp)
+        login_page.click_verify_signin()
+        login_page.wait_for_url("**/home")
 
-        assert page.get_by_text("Overview").is_visible(), "Expected 'Overview' to be visible after login."
+        assert login_page.get_by_text("Overview").is_visible(), "Expected 'Overview' to be visible after login."
