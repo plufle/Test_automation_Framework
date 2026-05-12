@@ -1,24 +1,29 @@
 """
 Dashboard API Test Suite
 
-This module contains API tests for validating the dashboard data endpoints.
+Validates dashboard data endpoints using the DashboardAPIService.
 """
+import pytest
+from services.api_service import DashboardAPIService
+
+
+@pytest.fixture(scope="module")
+def dashboard_api(api_context):
+    """Provide a DashboardAPIService wired to the authenticated API context."""
+    return DashboardAPIService(api_context)
+
 
 class TestAuthAPI:
     """Validates the authentication API endpoints."""
 
-    def test_verify_token(self, api_context):
+    def test_verify_token(self, dashboard_api):
         """Verifies that the auth token is valid and returns correct user details."""
-        response = api_context.get("api/auth/verify-token")
+        data = dashboard_api.verify_token()
 
-        assert response.status == 200
-        data = response.json()
-        print(data)
         assert data["success"] is True
         assert "user" in data
 
         user = data["user"]
-
         assert "email" in user
         assert "accessType" in user
         assert "role" in user
@@ -28,14 +33,10 @@ class TestAuthAPI:
 class TestDashboardStatsAPI:
     """Validates the dashboard statistics endpoints."""
 
-    def test_get_stats(self, api_context):
+    def test_get_stats(self, dashboard_api):
         """Fetches the dashboard statistics and validates the response schema."""
-        response = api_context.get("/api/stats")
+        data = dashboard_api.get_stats()
 
-        assert response.status == 200
-
-        data = response.json()
-        print(data)
         assert isinstance(data["models"], int)
         assert isinstance(data["scenes"], int)
         assert isinstance(data["products"], int)
@@ -47,63 +48,44 @@ class TestDashboardStatsAPI:
         assert isinstance(data["user"], str)
         assert isinstance(data["tenant"], str)
 
-    def test_stats_vs_products(self, api_context):
+    def test_stats_vs_products(self, dashboard_api):
         """Validates that the active products count in stats matches the products list."""
-        stats = api_context.get("/api/stats").json()
-        products = api_context.get("/api/products").json()
-
-        active_products = [
-            p for p in products
-            if p.get("status") != "archived"
-        ]
-
-        assert stats["products"] == len(active_products)
-
+        stats = dashboard_api.get_stats()
+        active_count = dashboard_api.get_active_products_count()
+        assert stats["products"] == active_count
 
 
 class TestProductsAPI:
     """Validates the products API endpoints."""
 
-    def test_get_products(self, api_context):
+    def test_get_products(self, dashboard_api):
         """Fetches the products list and validates the fields of the first product."""
-        response = api_context.get("/api/products")
+        products = dashboard_api.get_products()
+        assert isinstance(products, list)
 
-        assert response.status == 200
-        data = response.json()
-        print(data)
-        assert isinstance(data, list)
-
-        if len(data) > 0:
-            product = data[0]
-
+        if len(products) > 0:
+            product = products[0]
             assert "id" in product
             assert "name" in product
             assert "type" in product
             assert "date" in product
             assert "status" in product
-
             assert isinstance(product["modelCount"], int)
             assert isinstance(product["experienceCount"], int)
-
 
 
 class TestScenesAPI:
     """Validates the scenes API endpoints."""
 
-    def test_get_scenes(self, api_context):
+    def test_get_scenes(self, dashboard_api):
         """Fetches the scenes list and validates the fields of the first scene."""
-        response = api_context.get("/api/scenes")
+        data = dashboard_api.get_scenes()
 
-        assert response.status == 200
-
-        data = response.json()
-        print(data)
         assert "scenes" in data
         assert isinstance(data["scenes"], list)
 
         if len(data["scenes"]) > 0:
             scene = data["scenes"][0]
-
             assert "id" in scene
             assert "name" in scene
             assert "displayTitle" in scene

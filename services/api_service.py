@@ -1,0 +1,76 @@
+"""
+DashboardAPIService — wraps all dashboard-related API calls.
+
+Centralises request logic so that tests focus on validation, not HTTP plumbing.
+Raises APIError on non-200 responses instead of using bare assertions.
+"""
+
+import allure
+
+
+class APIError(Exception):
+    """Raised when an API endpoint returns an unexpected HTTP status."""
+
+    def __init__(self, endpoint: str, status: int, expected: int = 200):
+        self.endpoint = endpoint
+        self.status = status
+        self.expected = expected
+        super().__init__(
+            f"API {endpoint} returned status {status} (expected {expected})"
+        )
+
+
+class DashboardAPIService:
+    """Thin wrapper around the Playwright APIRequestContext for dashboard endpoints."""
+
+    def __init__(self, api_context):
+        self._ctx = api_context
+
+    def _get(self, endpoint: str) -> dict | list:
+        """Perform a GET request and return parsed JSON. Raises APIError on failure."""
+        response = self._ctx.get(endpoint)
+        if response.status != 200:
+            raise APIError(endpoint, response.status)
+        return response.json()
+
+    # ------------------------------------------------------------------
+    # Auth
+    # ------------------------------------------------------------------
+
+    @allure.step("API — verify auth token")
+    def verify_token(self) -> dict:
+        """GET /api/auth/verify-token → full response JSON."""
+        return self._get("api/auth/verify-token")
+
+    # ------------------------------------------------------------------
+    # Stats
+    # ------------------------------------------------------------------
+
+    @allure.step("API — fetch dashboard stats")
+    def get_stats(self) -> dict:
+        """GET /api/stats → full response JSON."""
+        return self._get("/api/stats")
+
+    # ------------------------------------------------------------------
+    # Products
+    # ------------------------------------------------------------------
+
+    @allure.step("API — fetch products list")
+    def get_products(self) -> list[dict]:
+        """GET /api/products → list of product dicts."""
+        return self._get("/api/products")
+
+    @allure.step("API — count active (non-archived) products")
+    def get_active_products_count(self) -> int:
+        """Return the number of products whose status ≠ 'archived'."""
+        products = self.get_products()
+        return len([p for p in products if p.get("status") != "archived"])
+
+    # ------------------------------------------------------------------
+    # Scenes
+    # ------------------------------------------------------------------
+
+    @allure.step("API — fetch scenes list")
+    def get_scenes(self) -> dict:
+        """GET /api/scenes → full response JSON (contains a 'scenes' key)."""
+        return self._get("/api/scenes")

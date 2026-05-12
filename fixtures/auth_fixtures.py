@@ -1,49 +1,73 @@
+"""
+Authentication fixtures.
+
+- global_auth_state  : session-scoped login → saves storage state once.
+- browser_context_args : injects authenticated state into every test's context.
+- unauthenticated_page : clean browser context for login-flow tests.
+"""
+
 import pytest
+from pages.login_page import LoginPage
 from utils.email_otp import fetch_otp
+from utils.waits import wait_for_local_storage
+
 
 @pytest.fixture(scope="session")
 def global_auth_state(config, tmp_path_factory, browser):
     """
-    Performs login once per session and saves the storage state.
-    Returns the path to the state file.
+    Performs login once per session using the LoginPage page object
+    and saves the authenticated storage state to disk.
+
+    Returns the path to the state.json file.
     """
     state_path = tmp_path_factory.mktemp("state") / "state.json"
-    
+
     context = browser.new_context()
     page = context.new_page()
-    
-    page.goto(config["base_url"])
-    page.fill("#email", config["email_user"])
-    page.get_by_role("button", name="Send Verification Code").click()
+
+    # Use the LoginPage page object — no raw locators in fixtures
+    login_page = LoginPage(page)
+    login_page.navigate(config["base_url"])
+    login_page.fill_email(config["email_user"])
+    login_page.click_send_otp()
 
     otp = fetch_otp(config["email_user"], config["email_pass"])
 
-    page.fill("#otp", otp)
-    page.get_by_role("button", name="Verify & Sign In").click()
-    page.wait_for_url("**/home")
-    
-    # Ensure token is populated
-    page.wait_for_function("window.localStorage.getItem('auth_token') != null")
-    
+    login_page.fill_otp(otp)
+    login_page.click_verify_signin()
+    login_page.wait_for_url("**/home")
+
+    # Wait until the auth token is stored in localStorage
+    wait_for_local_storage(page, "auth_token")
+
     context.storage_state(path=state_path)
     context.close()
-        
+
     return state_path
+
 
 @pytest.fixture
 def browser_context_args(browser_context_args, global_auth_state):
     """
-    Apply the authenticated state to all tests using the default page fixture.
+    Injects the authenticated storage state into the default browser
+    context used by pytest-playwright's `page` fixture.
+
+    Every test gets its own fresh context pre-loaded with auth,
+    ensuring complete test isolation.
     """
     return {
         **browser_context_args,
         "storage_state": global_auth_state,
     }
 
+
 @pytest.fixture
-def unauthenticated_page(browser, config):
+def unauthenticated_page(browser):
     """
-    Provides a fresh, unauthenticated page specifically for login tests.
+    Provides a fresh, unauthenticated page for login-flow tests.
+
+    Creates its own isolated context so it cannot leak state to or
+    from other tests.
     """
     context = browser.new_context()
     page = context.new_page()
