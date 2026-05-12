@@ -1,23 +1,23 @@
 """
 Login Test Suite
 
-Validates the end-to-end OTP login flow using the LoginPage page object.
+Validates the end-to-end OTP login flow.
+
+Naming convention:
+    test_login_<what_is_being_checked>
 """
-import pytest
+
 from pages.login_page import LoginPage
 from utils.email_otp import fetch_otp
 
 
-class TestLogin:
-    """Validates the login flow using OTP."""
+class TestLoginFlow:
+    """Validates the complete OTP-based login flow."""
 
-    def test_login_with_otp(self, unauthenticated_page, config):
+    def test_login_with_valid_otp_lands_on_dashboard(self, unauthenticated_page, config):
         """
-        Tests the complete login flow using an email OTP.
-
-        Navigates to the login page, requests an OTP, fetches it via email,
-        submits the OTP, and verifies successful login by ensuring the
-        'Overview' section is visible on the dashboard.
+        After submitting a valid OTP the user should be redirected
+        to /home and the 'Overview' heading should be visible.
         """
         login_page = LoginPage(unauthenticated_page)
 
@@ -32,5 +32,5 @@ class TestLogin:
         login_page.wait_for_url("**/home")
 
         assert login_page.get_by_text("Overview").is_visible(), (
-            "Expected 'Overview' to be visible after login."
+            "Expected 'Overview' to be visible after successful login."
         )

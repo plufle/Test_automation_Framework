@@ -1,11 +1,20 @@
 """
 Dashboard API Test Suite
 
-Validates dashboard data endpoints using the DashboardAPIService.
+Each test validates exactly ONE thing (atomic tests).
+Uses DashboardAPIService for all HTTP calls.
+
+Naming convention:
+    test_<endpoint>_<what_is_being_checked>
 """
+
 import pytest
 from services.api_service import DashboardAPIService
 
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
 def dashboard_api(api_context):
@@ -13,81 +22,207 @@ def dashboard_api(api_context):
     return DashboardAPIService(api_context)
 
 
+@pytest.fixture(scope="module")
+def token_response(dashboard_api):
+    """Fetch verify-token response once — shared by all auth tests."""
+    return dashboard_api.verify_token()
+
+
+@pytest.fixture(scope="module")
+def stats_response(dashboard_api):
+    """Fetch stats response once — shared by all stats schema tests."""
+    return dashboard_api.get_stats()
+
+
+@pytest.fixture(scope="module")
+def products_response(dashboard_api):
+    """Fetch products list once — shared by all products tests."""
+    return dashboard_api.get_products()
+
+
+@pytest.fixture(scope="module")
+def scenes_response(dashboard_api):
+    """Fetch scenes response once — shared by all scenes tests."""
+    return dashboard_api.get_scenes()
+
+
+# ---------------------------------------------------------------------------
+# Auth API — one assertion per test
+# ---------------------------------------------------------------------------
+
 class TestAuthAPI:
-    """Validates the authentication API endpoints."""
+    """Validates the authentication API response."""
 
-    def test_verify_token(self, dashboard_api):
-        """Verifies that the auth token is valid and returns correct user details."""
-        data = dashboard_api.verify_token()
+    def test_verify_token_returns_success(self, token_response):
+        """The verify-token endpoint should return success=True."""
+        assert token_response["success"] is True
 
-        assert data["success"] is True
-        assert "user" in data
+    def test_verify_token_contains_user_object(self, token_response):
+        """The response must include a 'user' object."""
+        assert "user" in token_response
 
-        user = data["user"]
-        assert "email" in user
-        assert "accessType" in user
-        assert "role" in user
-        assert "tenant" in user
+    def test_verify_token_user_has_email(self, token_response):
+        """The user object must contain an email field."""
+        assert "email" in token_response["user"]
 
+    def test_verify_token_user_has_access_type(self, token_response):
+        """The user object must contain an accessType field."""
+        assert "accessType" in token_response["user"]
+
+    def test_verify_token_user_has_role(self, token_response):
+        """The user object must contain a role field."""
+        assert "role" in token_response["user"]
+
+    def test_verify_token_user_has_tenant(self, token_response):
+        """The user object must contain a tenant field."""
+        assert "tenant" in token_response["user"]
+
+
+# ---------------------------------------------------------------------------
+# Stats API — one assertion per test
+# ---------------------------------------------------------------------------
 
 class TestDashboardStatsAPI:
-    """Validates the dashboard statistics endpoints."""
+    """Validates the dashboard statistics response schema."""
 
-    def test_get_stats(self, dashboard_api):
-        """Fetches the dashboard statistics and validates the response schema."""
-        data = dashboard_api.get_stats()
+    def test_stats_models_is_integer(self, stats_response):
+        """The 'models' field must be an integer."""
+        assert isinstance(stats_response["models"], int)
 
-        assert isinstance(data["models"], int)
-        assert isinstance(data["scenes"], int)
-        assert isinstance(data["products"], int)
-        assert isinstance(data["shares"], int)
-        assert isinstance(data["totalSessions"], int)
-        assert isinstance(data["totalUsers"], int)
+    def test_stats_scenes_is_integer(self, stats_response):
+        """The 'scenes' field must be an integer."""
+        assert isinstance(stats_response["scenes"], int)
 
-        assert isinstance(data["revenue"], str)
-        assert isinstance(data["user"], str)
-        assert isinstance(data["tenant"], str)
+    def test_stats_products_is_integer(self, stats_response):
+        """The 'products' field must be an integer."""
+        assert isinstance(stats_response["products"], int)
 
-    def test_stats_vs_products(self, dashboard_api):
-        """Validates that the active products count in stats matches the products list."""
+    def test_stats_shares_is_integer(self, stats_response):
+        """The 'shares' field must be an integer."""
+        assert isinstance(stats_response["shares"], int)
+
+    def test_stats_total_sessions_is_integer(self, stats_response):
+        """The 'totalSessions' field must be an integer."""
+        assert isinstance(stats_response["totalSessions"], int)
+
+    def test_stats_total_users_is_integer(self, stats_response):
+        """The 'totalUsers' field must be an integer."""
+        assert isinstance(stats_response["totalUsers"], int)
+
+    def test_stats_revenue_is_string(self, stats_response):
+        """The 'revenue' field must be a string."""
+        assert isinstance(stats_response["revenue"], str)
+
+    def test_stats_user_is_string(self, stats_response):
+        """The 'user' field must be a string."""
+        assert isinstance(stats_response["user"], str)
+
+    def test_stats_tenant_is_string(self, stats_response):
+        """The 'tenant' field must be a string."""
+        assert isinstance(stats_response["tenant"], str)
+
+
+class TestStatsVsProducts:
+    """Cross-endpoint consistency checks."""
+
+    def test_stats_products_matches_active_products_count(self, dashboard_api):
+        """The products count in /stats must equal the filtered /products list length."""
         stats = dashboard_api.get_stats()
         active_count = dashboard_api.get_active_products_count()
-        assert stats["products"] == active_count
+        assert stats["products"] == active_count, (
+            f"Stats reports {stats['products']} products but "
+            f"/products has {active_count} active entries."
+        )
 
+
+# ---------------------------------------------------------------------------
+# Products API — one assertion per test
+# ---------------------------------------------------------------------------
 
 class TestProductsAPI:
-    """Validates the products API endpoints."""
+    """Validates the products list endpoint."""
 
-    def test_get_products(self, dashboard_api):
-        """Fetches the products list and validates the fields of the first product."""
-        products = dashboard_api.get_products()
-        assert isinstance(products, list)
+    def test_products_returns_list(self, products_response):
+        """The /products endpoint must return a JSON array."""
+        assert isinstance(products_response, list)
 
-        if len(products) > 0:
-            product = products[0]
-            assert "id" in product
-            assert "name" in product
-            assert "type" in product
-            assert "date" in product
-            assert "status" in product
-            assert isinstance(product["modelCount"], int)
-            assert isinstance(product["experienceCount"], int)
+    def test_first_product_has_id(self, products_response):
+        """The first product must have an 'id' field."""
+        assert len(products_response) > 0, "No products returned — cannot validate schema."
+        assert "id" in products_response[0]
 
+    def test_first_product_has_name(self, products_response):
+        """The first product must have a 'name' field."""
+        assert len(products_response) > 0, "No products returned."
+        assert "name" in products_response[0]
+
+    def test_first_product_has_type(self, products_response):
+        """The first product must have a 'type' field."""
+        assert len(products_response) > 0, "No products returned."
+        assert "type" in products_response[0]
+
+    def test_first_product_has_date(self, products_response):
+        """The first product must have a 'date' field."""
+        assert len(products_response) > 0, "No products returned."
+        assert "date" in products_response[0]
+
+    def test_first_product_has_status(self, products_response):
+        """The first product must have a 'status' field."""
+        assert len(products_response) > 0, "No products returned."
+        assert "status" in products_response[0]
+
+    def test_first_product_model_count_is_integer(self, products_response):
+        """The 'modelCount' of the first product must be an integer."""
+        assert len(products_response) > 0, "No products returned."
+        assert isinstance(products_response[0]["modelCount"], int)
+
+    def test_first_product_experience_count_is_integer(self, products_response):
+        """The 'experienceCount' of the first product must be an integer."""
+        assert len(products_response) > 0, "No products returned."
+        assert isinstance(products_response[0]["experienceCount"], int)
+
+
+# ---------------------------------------------------------------------------
+# Scenes API — one assertion per test
+# ---------------------------------------------------------------------------
 
 class TestScenesAPI:
-    """Validates the scenes API endpoints."""
+    """Validates the scenes list endpoint."""
 
-    def test_get_scenes(self, dashboard_api):
-        """Fetches the scenes list and validates the fields of the first scene."""
-        data = dashboard_api.get_scenes()
+    def test_scenes_response_has_scenes_key(self, scenes_response):
+        """The /scenes response must contain a 'scenes' key."""
+        assert "scenes" in scenes_response
 
-        assert "scenes" in data
-        assert isinstance(data["scenes"], list)
+    def test_scenes_is_a_list(self, scenes_response):
+        """The 'scenes' value must be a JSON array."""
+        assert isinstance(scenes_response["scenes"], list)
 
-        if len(data["scenes"]) > 0:
-            scene = data["scenes"][0]
-            assert "id" in scene
-            assert "name" in scene
-            assert "displayTitle" in scene
-            assert "productId" in scene
-            assert "status" in scene
+    def test_first_scene_has_id(self, scenes_response):
+        """The first scene must have an 'id' field."""
+        scenes = scenes_response["scenes"]
+        assert len(scenes) > 0, "No scenes returned — cannot validate schema."
+        assert "id" in scenes[0]
+
+    def test_first_scene_has_name(self, scenes_response):
+        """The first scene must have a 'name' field."""
+        scenes = scenes_response["scenes"]
+        assert len(scenes) > 0, "No scenes returned."
+        assert "name" in scenes[0]
+
+    def test_first_scene_has_display_title(self, scenes_response):
+        """The first scene must have a 'displayTitle' field."""
+        scenes = scenes_response["scenes"]
+        assert len(scenes) > 0, "No scenes returned."
+        assert "displayTitle" in scenes[0]
+
+    def test_first_scene_has_product_id(self, scenes_response):
+        """The first scene must have a 'productId' field."""
+        scenes = scenes_response["scenes"]
+        assert len(scenes) > 0, "No scenes returned."
+        assert "productId" in scenes[0]
+
+    def test_first_scene_has_status(self, scenes_response):
+        """The first scene must have a 'status' field."""
+        scenes = scenes_response["scenes"]
+        assert len(scenes) > 0, "No scenes returned."
+        assert "status" in scenes[0]
