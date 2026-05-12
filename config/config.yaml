@@ -1,4 +1,4 @@
-base_url: "https://try.satorixr.com/login/"
-api_base_url: "https://try.satorixr.com/api/"
+base_url: "https://try.satorixr.com"
+api_base_url: "https://try.satorixr.com/api"
 browser: "chromium"
 headless: false
