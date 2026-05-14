@@ -7,31 +7,28 @@ def pytest_runtest_makereport(item, call):
     rep = outcome.get_result()
     setattr(item, "rep_" + rep.when, rep)
 
-@pytest.fixture(autouse=True)
-def allure_attachments_on_failure(request):
-    page = None
-    if "page" in request.fixturenames:
-        page = request.getfixturevalue("page")
-        
-    yield
-    
-    if hasattr(request.node, "rep_call") and request.node.rep_call.failed:
+    # Capture screenshots and videos for failed (call) or broken (setup) tests
+    if rep.when in ("setup", "call") and rep.failed:
+        # Attempt to get the page from instantiated fixtures
+        page = item.funcargs.get("page") or item.funcargs.get("unauthenticated_page")
         if page:
             try:
                 # Attach Screenshot
                 screenshot = page.screenshot(full_page=True)
                 allure.attach(
                     screenshot,
-                    name=f"Screenshot_{request.node.name}",
+                    name=f"Screenshot_{item.name}",
                     attachment_type=allure.attachment_type.PNG
                 )
                 
                 # Attach Video if available
                 if page.video:
+                    # Force flush the video to disk by closing the context
+                    page.context.close()
                     video_path = page.video.path()
                     allure.attach.file(
                         video_path,
-                        name=f"Video_{request.node.name}",
+                        name=f"Video_{item.name}",
                         attachment_type=allure.attachment_type.WEBM
                     )
             except Exception as e:

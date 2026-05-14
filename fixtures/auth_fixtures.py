@@ -6,6 +6,8 @@ Authentication fixtures.
 - unauthenticated_page : clean browser context for login-flow tests.
 """
 
+import os
+from pathlib import Path
 import pytest
 from pages.login_page import LoginPage
 from utils.email_otp import fetch_otp
@@ -13,14 +15,20 @@ from utils.waits import wait_for_local_storage
 
 
 @pytest.fixture(scope="session")
-def global_auth_state(config, tmp_path_factory, browser):
+def global_auth_state(config, browser):
     """
     Performs login once per session using the LoginPage page object
     and saves the authenticated storage state to disk.
+    Reuses existing state if available.
 
     Returns the path to the state.json file.
     """
-    state_path = tmp_path_factory.mktemp("state") / "state.json"
+    state_dir = Path(".auth")
+    state_dir.mkdir(exist_ok=True)
+    state_path = state_dir / "state.json"
+
+    if state_path.exists():
+        return str(state_path)
 
     context = browser.new_context()
     page = context.new_page()
@@ -40,10 +48,10 @@ def global_auth_state(config, tmp_path_factory, browser):
     # Wait until the auth token is stored in localStorage
     wait_for_local_storage(page, "auth_token")
 
-    context.storage_state(path=state_path)
+    context.storage_state(path=str(state_path))
     context.close()
 
-    return state_path
+    return str(state_path)
 
 
 @pytest.fixture
