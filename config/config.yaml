@@ -1,4 +1,15 @@
-base_url: "https://try.satorixr.com"
-api_base_url: "https://try.satorixr.com/api"
-browser: "chromium"
-headless: false
+default:
+  browser: "chromium"
+  headless: false
+
+dev:
+  base_url: "https://dev.satorixr.com"
+  api_base_url: "https://dev.satorixr.com/api"
+
+qa:
+  base_url: "https://try.satorixr.com"
+  api_base_url: "https://try.satorixr.com/api"
+
+prod:
+  base_url: "https://app.satorixr.com"
+  api_base_url: "https://app.satorixr.com/api"

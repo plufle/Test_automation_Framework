@@ -7,10 +7,13 @@ Naming convention:
     test_login_<what_is_being_checked>
 """
 
+import pytest
 from pages.login_page import LoginPage
 from utils.email_otp import fetch_otp
 
 
+@pytest.mark.ui
+@pytest.mark.smoke
 class TestLoginFlow:
     """Validates the complete OTP-based login flow."""
 

@@ -1,19 +1,13 @@
+import json
 import re
+from pathlib import Path
 
-DASHBOARD_URL_PATTERN = re.compile(r".*/home.*")
-OVERVIEW_HEADING = "Overview"
+# Load JSON data
+_data_file = Path(__file__).parent / "dashboard_data.json"
+with open(_data_file, "r") as f:
+    _data = json.load(f)
 
-EXPECTED_CARDS = [
-    "Total Products",
-    "Experiences",
-    "Sessions",
-    "Users",
-]
-
-EXPECTED_NAV_ITEMS = [
-    "Home",
-    "Products",
-    "Experiences",
-    "Analytics",
-    "Settings",
-]
+DASHBOARD_URL_PATTERN = re.compile(_data["dashboard_url_pattern"])
+OVERVIEW_HEADING = _data["overview_heading"]
+EXPECTED_CARDS = _data["expected_cards"]
+EXPECTED_NAV_ITEMS = _data["expected_nav_items"]

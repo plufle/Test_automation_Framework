@@ -25,9 +25,13 @@ class BasePage:
         self.page.goto(url)
 
     @allure.step("Wait for URL pattern: {url_pattern}")
-    def wait_for_url(self, url_pattern: str, timeout: int = 30000):
-        """Block until the current URL matches *url_pattern*."""
-        self.page.wait_for_url(url_pattern, timeout=timeout)
+    def wait_for_url(self, url_pattern: str, timeout: int = 60000):
+        """Block until the current URL matches *url_pattern*.
+
+        Uses wait_until='commit' because SatoriXR is a React SPA —
+        client-side routing changes the URL without a full page load.
+        """
+        self.page.wait_for_url(url_pattern, timeout=timeout, wait_until="commit")
 
     @allure.step("Reload the page")
     def reload(self):

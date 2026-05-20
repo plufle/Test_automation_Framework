@@ -100,26 +100,42 @@ automation-framework/
 
 ## Running Tests
 
-### All tests
+### All tests (sequential)
 ```bash
 pytest
 ```
 
-### Only UI tests
+### Parallel execution (API tests)
 ```bash
-pytest tests/ui/
+pytest tests/api/ -n auto          # auto-detect CPU cores
+pytest tests/api/ -n 4             # fixed 4 workers
 ```
 
-### Only API tests
+> **Note:** UI tests run sequentially by default because they share a session-scoped browser auth state. API tests are fully parallelisable.
+
+### Tag-based execution
 ```bash
-pytest tests/api/
+pytest -m smoke                    # quick CI gate (~30s)
+pytest -m regression               # detailed schema checks
+pytest -m "smoke or regression"    # full suite
+pytest -m ui                       # all UI tests
+pytest -m api                      # all API tests
+pytest -m "ui and smoke"           # only UI smoke tests
 ```
 
-### By marker
+| Marker | Purpose | Tests |
+|--------|---------|-------|
+| `smoke` | Fast sanity — blocks deploys if broken | Key endpoint + page checks |
+| `regression` | Full schema validation | Every field-level assertion |
+| `ui` | All browser tests | Dashboard UI + Login |
+| `api` | All HTTP tests | Auth, Stats, Products, Scenes |
+| `flaky` | Known unstable tests | Auto-retried |
+
+### Retry mechanism
+Failed tests are automatically retried **2 times** with a **3-second delay** (configured in `pytest.ini`). Override via CLI:
 ```bash
-pytest -m ui
-pytest -m api
-pytest -m smoke
+pytest --reruns 3 --reruns-delay 5   # 3 retries, 5s delay
+pytest --reruns 0                    # disable retries
 ```
 
 ### With Allure report
@@ -128,20 +144,45 @@ pytest --alluredir=reports/
 allure serve reports/
 ```
 
-### Using the helper script (Windows)
-```powershell
-.\run_tests.ps1
+### Using the helper scripts
+
+```bash
+# macOS / Linux
+./run_tests.sh                     # all tests
+./run_tests.sh --parallel          # API parallel + UI sequential
+./run_tests.sh --smoke             # smoke only
+./run_tests.sh --regression        # full regression
+./run_tests.sh --api               # API only
+./run_tests.sh --ui                # UI only
 ```
+
+```powershell
+# Windows
+.\run_tests.ps1                    # all tests
+.\run_tests.ps1 -Mode parallel     # API parallel + UI sequential
+.\run_tests.ps1 -Mode smoke        # smoke only
+```
+
+## Performance Optimizations
+
+| Optimization | How |
+|-------------|-----|
+| **Login once per session** | `global_auth_state` fixture (session-scoped) logs in once, saves storage state |
+| **Shared API context** | `api_context` is session-scoped — one authenticated context for all API tests |
+| **Module-scoped API responses** | `token_response`, `stats_response`, etc. fetch once per module, shared across tests |
+| **Parallel API tests** | `pytest-xdist` runs API tests across CPU cores (`-n auto`) |
+| **Auto-retry flaky tests** | `pytest-rerunfailures` avoids false negatives from network hiccups |
 
 ## Writing Tests
 
-- **UI Tests**: Add to `tests/ui/`. Use page objects from `pages/` and data from `test_data/`. Never put raw locators in test files.
-- **API Tests**: Add to `tests/api/`. Create service methods in `services/api_service.py` for new endpoints; tests call services and assert.
+- **UI Tests**: Add to `tests/ui/`. Use page objects from `pages/` and data from `test_data/`. Never put raw locators in test files. Tag with `@pytest.mark.ui`.
+- **API Tests**: Add to `tests/api/`. Create service methods in `services/api_service.py` for new endpoints; tests call services and assert. Tag with `@pytest.mark.api`.
 - **New Pages**: Inherit from `BasePage`. Keep only locators and actions — no assertions.
+- **Markers**: Always tag tests with `smoke` or `regression` for filtering support.
 
 ## Debugging Failures
 
-The framework retains screenshots, videos, and full Playwright traces for any failed tests.
+The framework retains screenshots, videos, and full Playwright traces for any failed tests. Flaky tests show retry history in the Allure report.
 
 ```bash
 # View a trace interactively

@@ -27,27 +27,29 @@ from test_data.dashboard_data import (
 # Fixtures — setup via page objects, not raw locators
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(autouse=True, scope="function")
-def navigate_to_dashboard(page, config):
+@pytest.fixture(scope="module")
+def module_page(browser, global_auth_state, config):
     """
-    Navigate to the dashboard before every test.
-
-    Uses the DashboardPage page object for setup — no raw locators.
-    Each test gets a fresh page via pytest-playwright's function-scoped
-    context, ensuring complete test isolation.
+    Module-scoped page that navigates to the dashboard once.
+    This avoids unnecessary navigation/setup for every single test.
     """
+    context = browser.new_context(storage_state=global_auth_state)
+    page = context.new_page()
+    
     dashboard = DashboardPage(page)
     dashboard.navigate(config["base_url"])
     dashboard.wait_for_url("**/home")
     dashboard.get_heading(OVERVIEW_HEADING).first.wait_for(
         state="visible", timeout=20000
     )
+    yield page
+    context.close()
 
 
 @pytest.fixture
-def dashboard(page):
-    """Return a DashboardPage instance bound to the current page."""
-    return DashboardPage(page)
+def dashboard(module_page):
+    """Return a DashboardPage instance bound to the shared module page."""
+    return DashboardPage(module_page)
 
 
 @pytest.fixture
@@ -60,9 +62,11 @@ def dashboard_api(api_context):
 # Page basics — one assertion per test
 # ---------------------------------------------------------------------------
 
+@pytest.mark.ui
 class TestDashboardPageBasics:
     """Basic page-level sanity checks."""
 
+    @pytest.mark.smoke
     def test_page_title_contains_product_name(self, dashboard):
         """The browser tab title should contain 'SatoriXR'."""
         title = dashboard.get_title()
@@ -70,6 +74,7 @@ class TestDashboardPageBasics:
             f"Expected 'SatoriXR' in page title, got: '{title}'"
         )
 
+    @pytest.mark.smoke
     def test_url_resolves_to_home_route(self, dashboard):
         """After login the URL should match the /home pattern."""
         url = dashboard.get_url()
@@ -77,6 +82,7 @@ class TestDashboardPageBasics:
             f"Expected URL to match '{DASHBOARD_URL_PATTERN.pattern}', got: '{url}'"
         )
 
+    @pytest.mark.regression
     def test_no_error_banners_on_load(self, dashboard):
         """No generic error banners should be visible on the dashboard."""
         error_locator = dashboard.locator(
@@ -91,14 +97,17 @@ class TestDashboardPageBasics:
 # Overview section — one assertion per test
 # ---------------------------------------------------------------------------
 
+@pytest.mark.ui
 class TestOverviewSection:
     """Validates the Overview heading."""
 
+    @pytest.mark.smoke
     def test_overview_heading_is_visible(self, dashboard):
         """The 'Overview' heading must be visible."""
         heading = dashboard.get_heading(OVERVIEW_HEADING)
         expect(heading).to_be_visible(timeout=10000)
 
+    @pytest.mark.regression
     def test_overview_heading_text_is_exact(self, dashboard):
         """The heading should read exactly 'Overview'."""
         heading = dashboard.get_heading(OVERVIEW_HEADING).first
@@ -113,15 +122,18 @@ class TestOverviewSection:
 # Summary cards — parametrized = one test run per card
 # ---------------------------------------------------------------------------
 
+@pytest.mark.ui
 class TestSummaryCards:
     """Validates metric cards. Each parametrized run = one card = one assertion."""
 
+    @pytest.mark.smoke
     @pytest.mark.parametrize("card_title", EXPECTED_CARDS)
     def test_card_is_visible(self, dashboard, card_title):
         """The metric card should be visible on the dashboard."""
         card = dashboard.get_metric_card(card_title)
         expect(card).to_be_visible()
 
+    @pytest.mark.regression
     @pytest.mark.parametrize("card_title", EXPECTED_CARDS)
     def test_card_displays_a_number(self, dashboard, card_title):
         """The metric card should contain at least one digit."""
@@ -133,9 +145,12 @@ class TestSummaryCards:
 # API-vs-UI consistency — single comparison assertion
 # ---------------------------------------------------------------------------
 
+@pytest.mark.ui
+@pytest.mark.api
 class TestApiUiConsistency:
     """Cross-layer validation between API data and UI display."""
 
+    @pytest.mark.regression
     def test_products_card_matches_api_count(self, dashboard, dashboard_api):
         """The 'Total Products' card value should equal the API active count."""
         with allure.step("Fetch active products count from API"):
@@ -156,9 +171,11 @@ class TestApiUiConsistency:
 # Sidebar navigation — parametrized = one test run per nav item
 # ---------------------------------------------------------------------------
 
+@pytest.mark.ui
 class TestSidebarNavigation:
     """Validates sidebar nav items. Each parametrized run = one item."""
 
+    @pytest.mark.smoke
     @pytest.mark.parametrize("nav_label", EXPECTED_NAV_ITEMS)
     def test_nav_item_is_visible(self, dashboard, nav_label):
         """The navigation item should be visible in the sidebar."""
