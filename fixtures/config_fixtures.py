@@ -11,13 +11,20 @@ def get_env():
         "email_pass": os.getenv("EMAIL_PASS"),
     }
 
-def load_config():
+def load_config(env):
     with open("config/config.yaml") as f:
-        return yaml.safe_load(f)
+        data = yaml.safe_load(f)
+        
+    config = data.get("default", {})
+    env_data = data.get(env, {})
+    config.update(env_data)
+    
+    return config
 
 @pytest.fixture(scope="session")
-def config():
-    base_config = load_config()
+def config(request):
+    env = request.config.getoption("--env")
+    base_config = load_config(env)
     env_config = get_env()
     base_config.update(env_config)
     return base_config
