@@ -20,36 +20,64 @@ def global_auth_state(config, browser):
     Performs login once per session using the LoginPage page object
     and saves the authenticated storage state to disk.
     Reuses existing state if available.
+    Supports atomic cross-process worker synchronization.
 
     Returns the path to the state.json file.
     """
     state_dir = Path(".auth")
     state_dir.mkdir(exist_ok=True)
     state_path = state_dir / "state.json"
+    lock_dir = state_dir / "login.lock"
 
     if state_path.exists():
         return str(state_path)
 
-    context = browser.new_context()
-    page = context.new_page()
+    # Attempt to acquire cross-process atomic lock
+    acquired_lock = False
+    try:
+        lock_dir.mkdir(exist_ok=False)
+        acquired_lock = True
+    except FileExistsError:
+        # Lock is held by another worker. Wait until state.json is created.
+        pass
 
-    # Use the LoginPage page object — no raw locators in fixtures
-    login_page = LoginPage(page)
-    login_page.navigate(config["base_url"])
-    login_page.fill_email(config["email_user"])
-    login_page.click_send_otp()
+    if acquired_lock:
+        try:
+            if not state_path.exists():
+                context = browser.new_context()
+                page = context.new_page()
 
-    otp = fetch_otp(config["email_user"], config["email_pass"])
+                # Use the LoginPage page object — no raw locators in fixtures
+                login_page = LoginPage(page)
+                login_page.navigate(config["base_url"])
+                login_page.fill_email(config["email_user"])
+                login_page.click_send_otp()
 
-    login_page.fill_otp(otp)
-    login_page.click_verify_signin()
-    login_page.wait_for_url("**/home")
+                otp = fetch_otp(config["email_user"], config["email_pass"])
 
-    # Wait until the auth token is stored in localStorage
-    wait_for_local_storage(page, "auth_token")
+                login_page.fill_otp(otp)
+                login_page.click_verify_signin()
+                login_page.wait_for_url("**/home")
 
-    context.storage_state(path=str(state_path))
-    context.close()
+                # Wait until the auth token is stored in localStorage
+                wait_for_local_storage(page, "auth_token")
+
+                context.storage_state(path=str(state_path))
+                context.close()
+        finally:
+            try:
+                lock_dir.rmdir()
+            except Exception:
+                pass
+    else:
+        # Wait up to 90 seconds for the state.json file to be written by the driver worker
+        import time
+        for _ in range(900):
+            if state_path.exists():
+                break
+            time.sleep(0.1)
+        else:
+            raise TimeoutError("Timed out waiting for state.json to be created by the driver worker.")
 
     return str(state_path)
 

@@ -99,7 +99,7 @@ class DashboardPage(BasePage):
         """Fallback — locate by visible text when there is no link role."""
         return self.page.locator(f"text={name}")
 
-    def get_nav(self, name: str, timeout: int = 10000) -> Locator:
+    def get_nav(self, name: str, timeout: int = 2000) -> Locator:
         """
         Smart nav locator — tries by role first, then falls back to
         text-based lookup.

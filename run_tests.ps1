@@ -17,10 +17,8 @@ if (Test-Path "allure-report") {
 
 switch ($Mode) {
     "parallel" {
-        Write-Host "Running API tests in parallel..."
-        pytest tests/api/ -n auto --alluredir=reports/
-        Write-Host "Running UI tests sequentially..."
-        pytest tests/ui/ --alluredir=reports/
+        Write-Host "Running all tests (API and UI) in parallel..."
+        pytest -n auto --alluredir=reports/
     }
     "smoke" {
         Write-Host "Running smoke tests..."
