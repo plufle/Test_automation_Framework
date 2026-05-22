@@ -20,6 +20,7 @@ from test_data.dashboard_data import (
     OVERVIEW_HEADING,
     EXPECTED_CARDS,
     EXPECTED_NAV_ITEMS,
+    EXPECTED_SUB_NAV_ITEMS,
 )
 
 
@@ -181,3 +182,16 @@ class TestSidebarNavigation:
         """The navigation item should be visible in the sidebar."""
         nav = dashboard.get_nav(nav_label)
         expect(nav.first).to_be_visible()
+
+    @pytest.mark.regression
+    @pytest.mark.parametrize("sub_nav_label", EXPECTED_SUB_NAV_ITEMS)
+    def test_settings_sub_nav_item_is_visible(self, dashboard, sub_nav_label):
+        """Clicking the Settings button should reveal the sub-navigation item."""
+        settings_button = dashboard.get_nav("Settings")
+        sub_item = dashboard.get_nav(sub_nav_label)
+        
+        # Click settings button to expand if the sub-item is not already visible
+        if not sub_item.is_visible():
+            settings_button.click()
+            
+        expect(sub_item).to_be_visible()

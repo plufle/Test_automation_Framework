@@ -30,45 +30,12 @@ class DashboardPage(BasePage):
     # ------------------------------------------------------------------
 
     @allure.step("Get metric card by title '{title}'")
-    def get_metric_card_by_title(self, title: str) -> Locator:
+    def get_metric_card(self, title: str) -> Locator:
         """
-        Primary locator: look for common card-like class names that
-        contain the expected title text.
+        Locates a metric card container by targeting its container classes 'div.bg-white.rounded-xl'
+        and filtering by the card title text.
         """
-        card_container = self.page.locator(
-            f"[class*='card']:has-text('{title}'), "
-            f"[class*='Card']:has-text('{title}'), "
-            f"[class*='stat']:has-text('{title}'), "
-            f"[class*='metric']:has-text('{title}')"
-        ).first
-        return card_container
-
-    @allure.step("Get metric card (fallback) by title '{title}'")
-    def get_metric_card_fallback(self, title: str) -> Locator:
-        """
-        Fallback locator — finds the deepest div that contains both
-        the title and a digit, avoiding broad layout wrappers.
-        """
-        return (
-            self.page.locator("div")
-            .filter(has_text=title)
-            .filter(has_text=re.compile(r"\d"))
-            .last
-        )
-
-    def get_metric_card(self, title: str, timeout: int = 10000) -> Locator:
-        """
-        Smart card locator — tries the primary selector first, then
-        falls back automatically.  Returns whichever locator is attached.
-        """
-        primary = self.get_metric_card_by_title(title)
-        try:
-            primary.wait_for(state="attached", timeout=timeout)
-            return primary
-        except Exception:
-            fallback = self.get_metric_card_fallback(title)
-            fallback.wait_for(state="attached", timeout=timeout)
-            return fallback
+        return self.page.locator("div.bg-white.rounded-xl").filter(has_text=title)
 
     # ------------------------------------------------------------------
     # Metric card data extraction
@@ -91,12 +58,16 @@ class DashboardPage(BasePage):
 
     @allure.step("Get navigation item with name '{name}'")
     def get_nav_item(self, name: str) -> Locator:
-        """Return a locator for a sidebar navigation link."""
+        """Return a locator for a sidebar navigation link or button."""
+        if name == "Settings":
+            return self.page.get_by_role("button", name=name)
         return self.page.get_by_role("link", name=name)
 
     @allure.step("Get navigation item (fallback) with name '{name}'")
     def get_nav_item_fallback(self, name: str) -> Locator:
         """Fallback — locate by visible text when there is no link role."""
+        if name == "Settings":
+            return self.page.locator("button").filter(has_text=name)
         return self.page.locator(f"text={name}")
 
     def get_nav(self, name: str, timeout: int = 2000) -> Locator:

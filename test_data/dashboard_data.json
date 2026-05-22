@@ -13,5 +13,12 @@
     "Experiences",
     "Analytics",
     "Settings"
+  ],
+  "expected_sub_nav_items": [
+    "User Management",
+    "Branding",
+    "Category Management",
+    "Background Management",
+    "Material Management"
   ]
 }
