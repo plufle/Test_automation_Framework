@@ -54,7 +54,7 @@ def global_auth_state(config, browser):
     return str(state_path)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def browser_context_args(browser_context_args, global_auth_state):
     """
     Injects the authenticated storage state into the default browser
@@ -70,14 +70,16 @@ def browser_context_args(browser_context_args, global_auth_state):
 
 
 @pytest.fixture
-def unauthenticated_page(browser):
+def unauthenticated_page(browser, browser_context_args):
     """
     Provides a fresh, unauthenticated page for login-flow tests.
 
     Creates its own isolated context so it cannot leak state to or
     from other tests.
     """
-    context = browser.new_context()
+    ctx_args = browser_context_args.copy()
+    ctx_args.pop("storage_state", None)
+    context = browser.new_context(**ctx_args)
     page = context.new_page()
     yield page
-    context.close()
+    context.close()

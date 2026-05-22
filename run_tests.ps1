@@ -1,8 +1,7 @@
-Write-Host "=== SatoriXR Test Runner ==="
-
 param(
     [string]$Mode = "all"
 )
+Write-Host "=== SatoriXR Test Runner ==="
 
 # Clean old reports
 Write-Host "Cleaning old reports..."

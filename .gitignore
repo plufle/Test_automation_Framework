@@ -13,7 +13,7 @@ venv.bak/
 
 # Pytest
 .pytest_cache/
-*.json
+*state.json
 
 # Allure
 test-results/

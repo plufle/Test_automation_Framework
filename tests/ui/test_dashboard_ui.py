@@ -28,12 +28,12 @@ from test_data.dashboard_data import (
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
-def module_page(browser, global_auth_state, config):
+def module_page(browser, browser_context_args, config):
     """
     Module-scoped page that navigates to the dashboard once.
     This avoids unnecessary navigation/setup for every single test.
     """
-    context = browser.new_context(storage_state=global_auth_state)
+    context = browser.new_context(**browser_context_args)
     page = context.new_page()
     
     dashboard = DashboardPage(page)
