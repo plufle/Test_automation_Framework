@@ -28,11 +28,11 @@ from test_data.dashboard_data import (
 # Fixtures — setup via page objects, not raw locators
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def module_page(browser, browser_context_args, config):
     """
-    Module-scoped page that navigates to the dashboard once.
-    This avoids unnecessary navigation/setup for every single test.
+    Function-scoped page that navigates to the dashboard for each test.
+    This ensures complete test isolation and proper video attachment on failure.
     """
     context = browser.new_context(**browser_context_args)
     page = context.new_page()
@@ -188,10 +188,7 @@ class TestSidebarNavigation:
     def test_settings_sub_nav_item_is_visible(self, dashboard, sub_nav_label):
         """Clicking the Settings button should reveal the sub-navigation item."""
         settings_button = dashboard.get_nav("Settings")
+        settings_button.click()
         sub_item = dashboard.get_nav(sub_nav_label)
-        
-        # Click settings button to expand if the sub-item is not already visible
-        if not sub_item.is_visible():
-            settings_button.click()
-            
         expect(sub_item).to_be_visible()
+        

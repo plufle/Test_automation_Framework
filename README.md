@@ -43,8 +43,7 @@ automation-framework/
 │   │   └── test_dashboard_api.py
 │   └── ui/                    # UI (browser) tests
 │       ├── __init__.py
-│       ├── test_dashboard_ui.py
-│       └── test_login.py
+│       └── test_dashboard_ui.py
 ├── utils/                     # Utility and helper functions
 │   ├── __init__.py
 │   ├── email_otp.py           # IMAP-based OTP fetcher
@@ -105,13 +104,13 @@ automation-framework/
 pytest
 ```
 
-### Parallel execution (API tests)
+### Parallel execution (UI & API tests)
 ```bash
-pytest tests/api/ -n auto          # auto-detect CPU cores
-pytest tests/api/ -n 4             # fixed 4 workers
+pytest -n auto                       # auto-detect CPU cores for all tests
+pytest tests/ui/ -n 4                # run UI tests with 4 parallel workers
 ```
 
-> **Note:** UI tests run sequentially by default because they share a session-scoped browser auth state. API tests are fully parallelisable.
+> **Note:** Both UI and API tests are fully parallelizable! The framework leverages an atomic lock-based synchronization system to log in once and share the authenticated browser state securely across parallel workers without conflicts.
 
 ### Tag-based execution
 ```bash
@@ -180,11 +179,13 @@ allure serve reports/
 - **New Pages**: Inherit from `BasePage`. Keep only locators and actions — no assertions.
 - **Markers**: Always tag tests with `smoke` or `regression` for filtering support.
 
-## Debugging Failures
+## Debugging Failures & Visual Evidence
 
-The framework retains screenshots, videos, and full Playwright traces for any failed tests. Flaky tests show retry history in the Allure report.
+The framework automatically captures visual evidence upon test failures or setup errors and attaches them directly to the Allure report. This works seamlessly in both sequential and parallel execution modes:
 
-```bash
-# View a trace interactively
-playwright show-trace test-results/<trace-zip-file>
-```
+- **Automated Screenshots (Photos)**: Captured for any failed test step or setup error to show the exact visual state of the application.
+- **Automated Video Recordings**: Recorded for UI test runs and automatically flushed, verified, and attached as `.webm` files when a test fails.
+- **Trace Files**: Playwright trace files can be inspected for deep execution timelines:
+  ```bash
+  playwright show-trace test-results/<trace-zip-file>
+  ```

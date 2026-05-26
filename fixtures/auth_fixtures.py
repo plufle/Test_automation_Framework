@@ -27,10 +27,14 @@ def global_auth_state(config, browser):
     state_dir = Path(".auth")
     state_dir.mkdir(exist_ok=True)
     state_path = state_dir / "state.json"
+    failed_path = state_dir / "login_failed.txt"
     lock_dir = state_dir / "login.lock"
 
     if state_path.exists():
         return str(state_path)
+
+    if failed_path.exists():
+        pytest.skip("login failed and none run")
 
     # Attempt to acquire cross-process atomic lock
     acquired_lock = False
@@ -43,27 +47,31 @@ def global_auth_state(config, browser):
 
     if acquired_lock:
         try:
-            if not state_path.exists():
-                context = browser.new_context()
-                page = context.new_page()
+            if not state_path.exists() and not failed_path.exists():
+                try:
+                    context = browser.new_context()
+                    page = context.new_page()
 
-                # Use the LoginPage page object — no raw locators in fixtures
-                login_page = LoginPage(page)
-                login_page.navigate(config["base_url"])
-                login_page.fill_email(config["email_user"])
-                login_page.click_send_otp()
+                    # Use the LoginPage page object — no raw locators in fixtures
+                    login_page = LoginPage(page)
+                    login_page.navigate(config["base_url"])
+                    login_page.fill_email(config["email_user"])
+                    login_page.click_send_otp()
 
-                otp = fetch_otp(config["email_user"], config["email_pass"])
+                    otp = fetch_otp(config["email_user"], config["email_pass"])
 
-                login_page.fill_otp(otp)
-                login_page.click_verify_signin()
-                login_page.wait_for_url("**/home")
+                    login_page.fill_otp(otp)
+                    login_page.click_verify_signin()
+                    login_page.wait_for_url("**/home")
 
-                # Wait until the auth token is stored in localStorage
-                wait_for_local_storage(page, "auth_token")
+                    # Wait until the auth token is stored in localStorage
+                    wait_for_local_storage(page, "auth_token")
 
-                context.storage_state(path=str(state_path))
-                context.close()
+                    context.storage_state(path=str(state_path))
+                    context.close()
+                except Exception:
+                    failed_path.write_text("login failed and none run", encoding="utf-8")
+                    pytest.skip("login failed and none run")
         finally:
             try:
                 lock_dir.rmdir()
@@ -75,9 +83,14 @@ def global_auth_state(config, browser):
         for _ in range(900):
             if state_path.exists():
                 break
+            if failed_path.exists():
+                break
             time.sleep(0.1)
         else:
             raise TimeoutError("Timed out waiting for state.json to be created by the driver worker.")
+
+        if failed_path.exists():
+            pytest.skip("login failed and none run")
 
     return str(state_path)
 

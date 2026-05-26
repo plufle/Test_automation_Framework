@@ -14,15 +14,18 @@ def pytest_runtest_makereport(item, call):
     if rep.when in ("setup", "call") and rep.failed:
         # Attempt to get the page dynamically from standard or page-object fixtures
         page = None
+        page_fixture_name = None
         for name in ("page", "unauthenticated_page", "module_page", "dashboard"):
             arg = item.funcargs.get(name)
             if not arg:
                 continue
             if isinstance(arg, Page):
                 page = arg
+                page_fixture_name = name
                 break
             elif hasattr(arg, "page") and isinstance(arg.page, Page):
                 page = arg.page
+                page_fixture_name = name
                 break
 
         if page:
@@ -37,9 +40,27 @@ def pytest_runtest_makereport(item, call):
                 
                 # 2. Attach Video if available
                 if page.video:
+                    # Determine if any of the page-related fixtures are broader than function scope.
                     # If it is a function-scoped context, we can safely close it now to force-flush video.
                     # If it is module-scoped (shared), do NOT close it to avoid breaking subsequent tests.
-                    is_module_scoped = "dashboard" in item.funcargs or "module_page" in item.funcargs
+                    is_module_scoped = False
+                    fixtures_to_check = []
+                    if page_fixture_name:
+                        fixtures_to_check.append(page_fixture_name)
+                    for name in ("dashboard", "module_page"):
+                        if name not in fixtures_to_check:
+                            fixtures_to_check.append(name)
+                            
+                    for name in fixtures_to_check:
+                        fixtureinfo = getattr(item, "_fixtureinfo", None)
+                        if fixtureinfo and name in fixtureinfo.name2fixturedefs:
+                            for fd in fixtureinfo.name2fixturedefs[name]:
+                                if fd.scope in ("module", "class", "package", "session"):
+                                    is_module_scoped = True
+                                    break
+                        if is_module_scoped:
+                            break
+
                     if not is_module_scoped:
                         try:
                             page.context.close()

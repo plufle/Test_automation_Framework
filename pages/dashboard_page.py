@@ -81,5 +81,8 @@ class DashboardPage(BasePage):
             return primary
         except Exception:
             fallback = self.get_nav_item_fallback(name)
-            fallback.wait_for(state="attached", timeout=timeout)
-            return fallback
+            try:
+                fallback.wait_for(state="attached", timeout=timeout)
+                return fallback
+            except Exception:
+                assert False, f"Navigation item '{name}' not found"
