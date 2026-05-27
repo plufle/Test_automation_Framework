@@ -53,6 +53,61 @@ class DashboardPage(BasePage):
         return int(match.group(0)) if match else None
 
     # ------------------------------------------------------------------
+    # product card locators
+    # ------------------------------------------------------------------
+
+    @allure.step("Get product cards in the Products section")
+    def get_section_product_cards(self) -> list[Locator]:
+        """Return a list of locators for the product cards displayed in the Products section."""
+        heading = self.get_products_heading()
+        container = heading.locator('xpath=../following-sibling::*[1]')
+        container.locator("div.p-4.flex.flex-col.flex-1").first.wait_for(state="visible", timeout=10000)
+        return container.locator("div.p-4.flex.flex-col.flex-1").all()
+
+    @allure.step("Get Products section heading")
+    def get_products_heading(self) -> Locator:
+        """Return the H2 heading for the Products section."""
+        return self.page.locator('h2:has-text("Products")').first
+
+    @staticmethod
+    def get_product_card_details(card: Locator) -> dict:
+        """Extract details from a product card Locator."""
+        title = card.locator("h3").inner_text().strip()
+        exp_text = card.locator("span:has-text('Experiences:')").last.inner_text().strip()
+        exp_match = re.search(r"Experiences:\s*(\d+)", exp_text)
+        exp_count = int(exp_match.group(1)) if exp_match else 0
+        time_text = card.locator("span.ml-auto").inner_text().strip()
+        return {
+            "name": title,
+            "experience_count": exp_count,
+            "relative_time": time_text
+        }
+    
+    # ------------------------------------------------------------------
+    # Experience card locators
+    # ------------------------------------------------------------------
+
+    def get_section_experience_cards(self) -> list[Locator]:
+        """Return a list of locators for the experience cards displayed in the Experiences section."""
+        heading = self.get_experiences_heading()
+        container = heading.locator('xpath=../following-sibling::*[1]')
+        container.locator("div.p-4.flex.flex-col.flex-1").first.wait_for(state="visible", timeout=10000)
+        return container.locator("div.p-4.flex.flex-col.flex-1").all()
+
+    def get_experiences_heading(self) -> Locator:
+        """Return the H2 heading for the Experiences section."""
+        return self.page.locator('h2:has-text("Experiences")').first
+    
+    def get_experience_card_details(self, card: Locator) -> dict:
+        """Extract details from an experience card Locator."""
+        title = card.locator("h3").inner_text().strip()
+        time_text = card.locator("span.ml-auto").inner_text().strip()
+        return {
+            "name": title,
+            "relative_time": time_text
+        }
+
+    # ------------------------------------------------------------------
     # Navigation locators
     # ------------------------------------------------------------------
 

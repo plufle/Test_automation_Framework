@@ -192,3 +192,81 @@ class TestSidebarNavigation:
         sub_item = dashboard.get_nav(sub_nav_label)
         expect(sub_item).to_be_visible()
         
+
+# ---------------------------------------------------------------------------
+# Products section
+# ---------------------------------------------------------------------------
+
+@pytest.mark.ui
+class TestProductDisplay:
+    """
+    This class contains tests for the Products section of the dashboard.
+    """
+
+    @pytest.mark.regression
+    def test_products_section_displays_latest_four_products(self, dashboard, dashboard_api):
+        """The Products section should display exactly the latest four products from the API sorted by date."""
+        with allure.step("Fetch active products from API and sort descending by date"):
+            products = dashboard_api.get_active_products()
+            sorted_api_products = sorted(products, key=lambda p: p.get("date", ""), reverse=True)
+            expected_latest_four = sorted_api_products[:4]
+
+        with allure.step("Get product cards from Products section"):
+            ui_cards = dashboard.get_section_product_cards()
+            assert len(ui_cards) == 4, (
+                f"Expected exactly 4 product cards in the UI, but found {len(ui_cards)}."
+            )
+
+        with allure.step("Verify each card details match the expected latest products in order"):
+            for index, card in enumerate(ui_cards):
+                ui_details = dashboard.get_product_card_details(card)
+                expected_product = expected_latest_four[index]
+                
+                # Check that name matches
+                assert ui_details["name"] == expected_product["name"], (
+                    f"Product at index {index} has mismatch name. "
+                    f"Expected: '{expected_product['name']}', Got: '{ui_details['name']}'"
+                )
+                
+                # Check that experience count matches
+                assert ui_details["experience_count"] == expected_product["experienceCount"], (
+                    f"Product '{expected_product['name']}' at index {index} has mismatch experience count. "
+                    f"Expected: {expected_product['experienceCount']}, Got: {ui_details['experience_count']}"
+                )    
+
+
+# ---------------------------------------------------------------------------
+# Experience section
+# ---------------------------------------------------------------------------
+
+@pytest.mark.ui
+class TestExperiencesSection:
+    """
+    This class contains tests for the Experiences section of the dashboard.
+    """
+
+    @pytest.mark.regression
+    def test_experiences_section_displays_latest_four_experiences(self, dashboard, dashboard_api):
+        """The Experiences section should display exactly the latest four experiences from the API sorted by date."""
+        with allure.step("Fetch active experiences from API and sort descending by date"):
+            experiences = dashboard_api.get_active_experiences()
+            # Sort descending by date to get the latest experiences
+            sorted_api_experiences = sorted(experiences, key=lambda e: e.get("date", ""), reverse=True)
+            expected_latest_four = sorted_api_experiences[:4]
+
+        with allure.step("Get experience cards from Experiences section"):
+            ui_cards = dashboard.get_section_experience_cards()
+            assert len(ui_cards) == 4, (
+                f"Expected exactly 4 experience cards in the UI, but found {len(ui_cards)}."
+            )
+
+        with allure.step("Verify each card details match the expected latest experiences in order"):
+            for index, card in enumerate(ui_cards):
+                ui_details = dashboard.get_experience_card_details(card)
+                expected_experience = expected_latest_four[index]
+                
+                # Check that name matches
+                assert ui_details["name"] == expected_experience["name"], (
+                    f"Experience at index {index} has mismatch name. "
+                    f"Expected: '{expected_experience['name']}', Got: '{ui_details['name']}'"
+                )
